@@ -19,7 +19,7 @@ from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_applicati
 from aiohttp import web
 
 from src.calendar_client import Booking, GoogleCalendarClient
-from src.config import load_config
+from src.config import Config, load_config
 from src.clients import ClientsManager
 from src.groq_chat import GroqConsultant
 from src.services import load_services, format_services, Service
@@ -44,44 +44,59 @@ MONTH_MAP = {
     "sep": 9, "oct": 10, "nov": 11, "dec": 12,
 }
 
+BOOKING_TRIGGERS = [
+    "book",
+    "book appointment",
+    "i want to book",
+    "schedule",
+    "appointment",
+    "reserve",
+    "запиши",
+    "записаться",
+    "хочу записаться",
+    "хочу на",
+    "запись",
+]
+
 
 def _parse_datetime_en(text: str, tz: str) -> datetime | None:
     text = text.strip()
-    now = datetime.now(ZoneInfo(tz))
+    zone = ZoneInfo(tz)
+    now = datetime.now(zone)
 
     try:
         dt = datetime.strptime(text, "%d.%m")
-        return dt.replace(year=now.year, tzinfo=ZoneInfo(tz))
+        return dt.replace(year=now.year, tzinfo=zone)
     except ValueError:
         pass
 
     try:
         dt = datetime.strptime(text, "%d.%m.%Y")
-        return dt.replace(tzinfo=ZoneInfo(tz))
+        return dt.replace(tzinfo=zone)
     except ValueError:
         pass
 
     try:
         dt = datetime.strptime(text, "%Y-%m-%d")
-        return dt.replace(tzinfo=ZoneInfo(tz))
+        return dt.replace(tzinfo=zone)
     except ValueError:
         pass
 
     try:
         dt = datetime.strptime(text, "%d.%m %H:%M")
-        return dt.replace(year=now.year, tzinfo=ZoneInfo(tz))
+        return dt.replace(year=now.year, tzinfo=zone)
     except ValueError:
         pass
 
     try:
         dt = datetime.strptime(text, "%d.%m.%Y %H:%M")
-        return dt.replace(tzinfo=ZoneInfo(tz))
+        return dt.replace(tzinfo=zone)
     except ValueError:
         pass
 
     try:
         dt = datetime.strptime(text, "%Y-%m-%d %H:%M")
-        return dt.replace(tzinfo=ZoneInfo(tz))
+        return dt.replace(tzinfo=zone)
     except ValueError:
         pass
 
@@ -99,7 +114,7 @@ def _parse_datetime_en(text: str, tz: str) -> datetime | None:
                     h, m = parts[1].split(":")
                     hour, minute = int(h), int(m)
                 dt = datetime(year, month, day, hour, minute)
-                return dt.replace(tzinfo=ZoneInfo(tz))
+                return dt.replace(tzinfo=zone)
             except (ValueError, IndexError):
                 continue
 
@@ -183,7 +198,7 @@ def _confirm_keyboard() -> InlineKeyboardMarkup:
 
 @dataclass(frozen=True)
 class AppState:
-    cfg: object
+    cfg: Config
     services: list[Service]
     consultant: GroqConsultant
     calendar: GoogleCalendarClient
@@ -200,7 +215,7 @@ def _match_service(services: list[Service], user_text: str) -> Service | None:
     return None
 
 
-async def send_typing_and_reply(message: Message, text: str, parse_mode=None):
+async def send_typing_and_reply(message: Message, text: str, parse_mode=None) -> None:
     await message.bot.send_chat_action(
         chat_id=message.chat.id, action=ChatAction.TYPING
     )
@@ -603,7 +618,7 @@ async def consult(message: Message, state: FSMContext, app: AppState) -> None:
     except Exception as e:
         logger.exception("Groq error")
         await send_typing_and_reply(
-            message, f"Consultation error. Please try again.\n\n{e}"
+            message, "Sorry, an error occurred during consultation. Please try again."
         )
         return
     await send_typing_and_reply(message, reply)
@@ -614,21 +629,7 @@ async def maybe_start_booking(
 ) -> None:
     text = (message.text or "").strip().lower()
 
-    booking_triggers = [
-        "book",
-        "book appointment",
-        "i want to book",
-        "schedule",
-        "appointment",
-        "reserve",
-        "запиши",
-        "записаться",
-        "хочу записаться",
-        "хочу на",
-        "запись",
-    ]
-
-    for trigger in booking_triggers:
+    for trigger in BOOKING_TRIGGERS:
         if trigger in text:
             await cmd_book(message, state, app)
             return
@@ -680,13 +681,13 @@ def main() -> None:
     )
 
     async def _run() -> None:
-        print("BOT_STARTING", flush=True)
+        logger.info("BOT_STARTING")
         bot = Bot(token=cfg.telegram_bot_token)
         dp = Dispatcher(storage=MemoryStorage())
 
         @dp.callback_query.middleware()
-        async def log_callback_query(handler, event, data):
-            print(f"CALLBACK_MW: data={event.data}", flush=True)
+        async def log_callback_query(handler, event, data) -> None:
+            logger.debug("CALLBACK_MW: data=%s", event.data)
             return await handler(event, data)
 
         async def _cmd_start(message: Message, state: FSMContext) -> None:
