@@ -1,0 +1,2 @@
+"""Salon bot package."""
+

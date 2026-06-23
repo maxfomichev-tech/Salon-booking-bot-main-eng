@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: aaron-salon-bot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m src.bot
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.2
+      - key: SALON_NAME
+        value: "Aaron"
+      - key: SALON_TIMEZONE
+        value: "Asia/Jerusalem"
+      # Required secrets (set in Render dashboard as "Secret")
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GOOGLE_CALENDAR_ID
+        sync: false
+      - key: GOOGLE_SERVICE_ACCOUNT_JSON
+        sync: false
+      # Optional: you can set WEBHOOK_URL explicitly.
+      # If empty, Render external URL will be used automatically.
+      - key: WEBHOOK_URL
+        sync: false
+      - key: WORK_START_HOUR
+        value: 10
+      - key: WORK_END_HOUR
+        value: 20

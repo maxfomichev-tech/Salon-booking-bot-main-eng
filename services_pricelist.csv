@@ -1,0 +1,12 @@
+category,service,duration_minutes,price_usd
+Haircuts,Women's Haircut,60,55
+Haircuts,Men's Haircut,45,40
+Haircuts,Kids' Haircut,40,30
+Coloring,Toning,90,90
+Coloring,Single-Tone Coloring,120,140
+Hair Treatment,Hair Botox,90,120
+Manicure,Classic Manicure,60,50
+Manicure,Gel Polish,60,60
+Pedicure,Machine Pedicure,90,80
+Brows,Brow Shaping,30,25
+Brows,Brow Tinting,30,30
