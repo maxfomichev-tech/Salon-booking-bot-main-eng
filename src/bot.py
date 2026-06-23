@@ -160,6 +160,20 @@ def _time_slots_keyboard(work_start: int, work_end: int) -> InlineKeyboardMarkup
     return InlineKeyboardMarkup(inline_keyboard=kb)
 
 
+def _date_keyboard(tz: str) -> InlineKeyboardMarkup:
+    now = datetime.now(ZoneInfo(tz))
+    today_str = now.strftime("%d.%m")
+    tomorrow = now + timedelta(days=1)
+    tomorrow_str = tomorrow.strftime("%d.%m")
+    kb = [
+        [InlineKeyboardButton(text=f"📅 Today ({today_str})", callback_data="date:today")],
+        [InlineKeyboardButton(text=f"📅 Tomorrow ({tomorrow_str})", callback_data="date:tomorrow")],
+        [InlineKeyboardButton(text="⌨️ Other date", callback_data="date:other")],
+        [InlineKeyboardButton(text="← Back", callback_data="back:cat")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=kb)
+
+
 def _confirm_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="✅ Yes, book", callback_data="confirm:yes")],
@@ -450,9 +464,8 @@ async def handle_service_cb(cq: CallbackQuery, state: FSMContext, app: AppState)
     )
     await state.set_state(BookingFlow.dt)
     await cq.message.edit_text(
-        "✅ Great! Enter the date. For example: <code>20.06</code>\n"
-        f"Timezone: {app.cfg.salon_timezone}",
-        parse_mode=ParseMode.HTML,
+        "✅ Great! Choose a date:",
+        reply_markup=_date_keyboard(app.cfg.salon_timezone),
     )
     await cq.answer()
 
@@ -518,6 +531,41 @@ async def handle_time_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
     await cq.answer()
 
 
+async def handle_date_cb(cq: CallbackQuery, state: FSMContext, app: AppState) -> None:
+    choice = cq.data.split(":", 1)[1]
+    now = datetime.now(ZoneInfo(app.cfg.salon_timezone))
+
+    if choice == "today":
+        selected = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif choice == "tomorrow":
+        selected = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+    else:
+        await cq.message.edit_text(
+            "Enter the date. For example: <code>20.06</code>\n"
+            "or <code>20.06 15:30</code> with time",
+            parse_mode=ParseMode.HTML,
+        )
+        await cq.answer()
+        return
+
+    if _is_weekend(selected):
+        await cq.message.answer(
+            "⚠️ You selected a weekend.\n"
+            "The salon is open Sunday through Friday.\n"
+            "Please choose another date.",
+            reply_markup=_date_keyboard(app.cfg.salon_timezone),
+        )
+        await cq.answer()
+        return
+
+    await state.update_data(selected_date_iso=selected.isoformat())
+    await cq.message.edit_text(
+        f"📅 {selected.strftime('%d.%m.%Y')}. Choose a time:",
+        reply_markup=_time_slots_keyboard(app.cfg.work_start_hour, app.cfg.work_end_hour),
+    )
+    await cq.answer()
+
+
 async def handle_back_cb(cq: CallbackQuery, state: FSMContext, app: AppState) -> None:
     target = cq.data.split(":", 1)[1]
     if target == "cat":
@@ -529,8 +577,8 @@ async def handle_back_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
     elif target == "dt":
         await state.set_state(BookingFlow.dt)
         await cq.message.edit_text(
-            "Enter the date. For example: <code>20.06</code>",
-            parse_mode=ParseMode.HTML,
+            "Choose a date:",
+            reply_markup=_date_keyboard(app.cfg.salon_timezone),
         )
     await cq.answer()
 
@@ -690,6 +738,10 @@ def main() -> None:
                 elif data.startswith("time:"):
                     if st == BookingFlow.dt.state:
                         await handle_time_cb(cq, state, app_state)
+                        return
+                elif data.startswith("date:"):
+                    if st == BookingFlow.dt.state:
+                        await handle_date_cb(cq, state, app_state)
                         return
                 elif data.startswith("confirm:"):
                     if st == BookingFlow.confirm.state:
