@@ -506,7 +506,7 @@ async def handle_time_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
     dt = datetime.fromisoformat(selected_date_iso).replace(hour=hour, minute=minute)
 
     if _is_weekend(dt):
-        await cq.message.answer(
+        await cq.message.edit_text(
             "⚠️ You selected a weekend.\n"
             "The salon is open Sunday through Friday. Choose another date\n"
             "or press /help to exit.",
@@ -516,7 +516,7 @@ async def handle_time_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
         return
 
     if _is_outside_work_hours(dt, app.cfg.work_start_hour, app.cfg.work_end_hour):
-        await cq.message.answer(
+        await cq.message.edit_text(
             f"⚠️ Working hours: {_format_work_hours(app.cfg.work_start_hour, app.cfg.work_end_hour)}.\n"
             f"You selected {dt.strftime('%H:%M')}. Please choose a time within working hours\n"
             "or press /help to exit.",
@@ -530,7 +530,7 @@ async def handle_time_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
 
     try:
         if not app.calendar.is_time_available(dt, end):
-            await cq.message.answer(
+            await cq.message.edit_text(
                 f"⚠️ Sorry, {dt.strftime('%H:%M')} is already booked. Choose another\n"
                 "or press /help to exit:",
                 reply_markup=_time_slots_keyboard(app.cfg.work_start_hour, app.cfg.work_end_hour),
@@ -564,7 +564,7 @@ async def handle_date_cb(cq: CallbackQuery, state: FSMContext, app: AppState) ->
         return
 
     if _is_weekend(selected):
-        await cq.message.answer(
+        await cq.message.edit_text(
             "⚠️ You selected a weekend.\n"
             "The salon is open Sunday through Friday.\n"
             "Please choose another date.",
