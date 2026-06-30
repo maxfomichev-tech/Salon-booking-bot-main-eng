@@ -68,7 +68,7 @@ def load_config() -> Config:
     return Config(
         telegram_bot_token=_require("TELEGRAM_BOT_TOKEN"),
         groq_api_key=_require("GROQ_API_KEY"),
-        groq_model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+        groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
         services_csv=services_csv,
         google_calendar_id=_require("GOOGLE_CALENDAR_ID"),
         google_service_account_json_path=Path(sa_path_raw) if sa_path_raw else None,
