@@ -790,6 +790,7 @@ def main() -> None:
             app = web.Application()
             app.router.add_get("/", lambda _: web.Response(text="ok"))
             app.router.add_get("/health", lambda _: web.Response(text="ok"))
+            app.router.add_get("/ping", lambda _: web.Response(text="ok"))
             SimpleRequestHandler(dispatcher=dp, bot=bot).register(app, path="/webhook")
             setup_application(app, dp, bot=bot)
 
