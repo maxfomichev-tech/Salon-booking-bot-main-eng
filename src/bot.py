@@ -252,7 +252,7 @@ async def cmd_book(message: Message, state: FSMContext, app: AppState) -> None:
     await state.set_state(BookingFlow.category)
     await state.update_data(draft={})
     await message.answer(
-        "📝 Great! Let's book your appointment. Choose a category or type a service name:",
+        "📝 Great! Let's book your appointment. Choose a category:",
         reply_markup=_categories_keyboard(app.services),
     )
 
@@ -266,7 +266,7 @@ async def book_service(message: Message, state: FSMContext, app: AppState) -> No
     if category and not _match_service(app.services, message.text or ""):
         await state.update_data(category=category)
         await state.set_state(BookingFlow.service)
-        await message.answer(
+        await message.edit_text(
             f"📌 {category}. Choose a service:",
             reply_markup=_services_keyboard(app.services, category),
         )
@@ -287,10 +287,9 @@ async def book_service(message: Message, state: FSMContext, app: AppState) -> No
         price_usd=svc.price_usd,
     )
     await state.set_state(BookingFlow.dt)
-    await message.answer(
-        "✅ Great! Enter the date. For example: <code>20.06</code>\n"
-        f"Timezone: {app.cfg.salon_timezone}",
-        parse_mode=ParseMode.HTML,
+    await message.edit_text(
+        "✅ Great! Choose a date:",
+        reply_markup=_date_keyboard(app.cfg.salon_timezone),
     )
 
 
@@ -298,8 +297,8 @@ async def book_dt(message: Message, state: FSMContext, app: AppState) -> None:
     dt = _parse_datetime_en(message.text or "", app.cfg.salon_timezone)
     if not dt:
         await message.answer(
-            "Couldn't understand the date. Use format <code>20.06</code> (day.month) or <code>20.06 15:30</code>\n"
-            "or press /help to continue the consultation",
+            "Couldn't understand the date. Use format <code>20.06</code> (day.month) or <code>20.06 15:30</code>",
+            reply_markup=_date_keyboard(app.cfg.salon_timezone),
             parse_mode=ParseMode.HTML,
         )
         return
@@ -320,15 +319,16 @@ async def book_dt(message: Message, state: FSMContext, app: AppState) -> None:
         await message.answer(
             "⚠️ You selected a weekend.\n"
             "The salon is open Sunday through Friday.\n"
-            "Please choose another date or press /help to exit."
+            "Please choose another date.",
+            reply_markup=_date_keyboard(app.cfg.salon_timezone),
         )
         return
 
     if _is_outside_work_hours(dt, app.cfg.work_start_hour, app.cfg.work_end_hour):
         await message.answer(
             f"⚠️ Working hours: {_format_work_hours(app.cfg.work_start_hour, app.cfg.work_end_hour)}.\n"
-            f"You selected {dt.strftime('%H:%M')}. Please choose a time within working hours\n"
-            "or press /help to exit."
+            f"You selected {dt.strftime('%H:%M')}. Please choose a time within working hours.",
+            reply_markup=_date_keyboard(app.cfg.salon_timezone),
         )
         return
 
@@ -340,8 +340,8 @@ async def book_dt(message: Message, state: FSMContext, app: AppState) -> None:
         if not app.calendar.is_time_available(dt, end):
             await message.answer(
                 f"⚠️ Sorry, {dt.strftime('%H:%M')} is already booked.\n"
-                "Please choose another time\n"
-                "or press /help to exit."
+                "Please choose another time.",
+                reply_markup=_date_keyboard(app.cfg.salon_timezone),
             )
             return
     except Exception as e:
