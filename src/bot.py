@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import os
 import sys
 import logging
@@ -213,6 +214,28 @@ def _match_service(services: list[Service], user_text: str) -> Service | None:
         if t in s.service.lower() or s.service.lower() in t:
             return s
     return None
+
+
+_ALLOWED_HTML_TAGS = {"b", "i", "code", "b", "i", "code"}
+
+
+def _escape_html(text: str) -> str:
+    """Escape HTML entities but preserve <b>, <i>, <code> tags from LLM."""
+    import re
+    placeholders = {}
+    counter = [0]
+
+    def _save_tag(m):
+        key = f"\x00{counter[0]}\x00"
+        counter[0] += 1
+        placeholders[key] = m.group(0)
+        return key
+
+    safe = re.sub(r"</?(?:b|i|code)>", _save_tag, text)
+    safe = html.escape(safe)
+    for key, val in placeholders.items():
+        safe = safe.replace(key, val)
+    return safe
 
 
 async def send_typing_and_reply(message: Message, text: str, parse_mode=None) -> None:
@@ -621,7 +644,9 @@ async def consult(message: Message, state: FSMContext, app: AppState) -> None:
             message, "Sorry, an error occurred during consultation. Please try again."
         )
         return
-    await send_typing_and_reply(message, reply, parse_mode=ParseMode.HTML)
+    if not reply:
+        reply = "Sorry, I couldn't generate a response. Please try again."
+    await send_typing_and_reply(message, _escape_html(reply), parse_mode=ParseMode.HTML)
 
 
 async def maybe_start_booking(
