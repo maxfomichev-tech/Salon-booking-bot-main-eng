@@ -621,7 +621,7 @@ async def consult(message: Message, state: FSMContext, app: AppState) -> None:
             message, "Sorry, an error occurred during consultation. Please try again."
         )
         return
-    await send_typing_and_reply(message, reply)
+    await send_typing_and_reply(message, reply, parse_mode=ParseMode.HTML)
 
 
 async def maybe_start_booking(
