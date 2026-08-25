@@ -220,8 +220,12 @@ _ALLOWED_HTML_TAGS = {"b", "i", "code", "b", "i", "code"}
 
 
 def _escape_html(text: str) -> str:
-    """Escape HTML entities but preserve <b>, <i>, <code> tags from LLM."""
+    """Escape HTML entities but preserve <b>, <i>, <code> tags from LLM.
+    Also strip unsupported tags (<ul>, <li>, <br>, etc.) and decode &nbsp;."""
     import re
+    text = text.replace("&nbsp;", " ")
+    text = re.sub(r"</?(?:ul|li|br|ol|div|span|p|blockquote|pre|a|s|u|tg-spoiler)[^>]*>", "", text)
+    text = re.sub(r"<[^>]+>", "", text)
     placeholders = {}
     counter = [0]
 
