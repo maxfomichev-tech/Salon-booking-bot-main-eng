@@ -638,6 +638,7 @@ async def handle_confirm_cb(cq: CallbackQuery, state: FSMContext, app: AppState)
         return
 
     await confirm_booking(cq.message, state, app, user_id=str(cq.from_user.id))
+    await cq.message.edit_reply_markup(reply_markup=None)
     await cq.answer()
 
 
