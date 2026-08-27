@@ -415,6 +415,7 @@ async def book_phone(message: Message, state: FSMContext) -> None:
         "Confirm your booking:\n"
         f"- Service: {data['service']} ({data['duration_minutes']} min, ${data['price_usd']})\n"
         f"- When: {formatted_date}\n"
+        f"- Address: {app.cfg.address}\n"
         f"- Name: {data['client_name']}\n"
         f"- Phone: {data['phone']}",
         reply_markup=_confirm_keyboard(),
