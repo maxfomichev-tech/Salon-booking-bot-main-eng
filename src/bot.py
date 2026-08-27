@@ -52,11 +52,15 @@ BOOKING_TRIGGERS = [
     "schedule",
     "appointment",
     "reserve",
-    "запиши",
-    "записаться",
-    "хочу записаться",
-    "хочу на",
-    "запись",
+    "yes",
+    "yeah",
+    "yep",
+    "sure",
+    "ok",
+    "okay",
+    "go ahead",
+    "let's do it",
+    "sounds good",
 ]
 
 
